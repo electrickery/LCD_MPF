@@ -4,3 +4,4 @@ This driver uses an 8-bit data path and full read/write access, making it somewh
 
 ![Demo with lcdtestmpf1.asm.](helloWorld.jpg)
 
+![Dump Z80 CPU registers](4x20RegDump.jpg)
