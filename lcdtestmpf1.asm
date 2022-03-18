@@ -12,12 +12,12 @@
 lcdCtrl     equ     0C8h    ;Port addresses. Change as needed.
 lcdData     equ     lcdCtrl + 1
 
-; write
+; configuration/commands
 lcd_cls     equ     01h        ; Clear display
 lcd_home    equ     02h     ; Return home
 lcd_entMd   equ     04h     ; Entry mode set (cursor move direction and display shift)
 lcd_entSh   equ     01h     ;   Entry mode display shift bit
-lcd_entCd   equ     02h     ;   Entry mode display cursor move diection bit
+lcd_entCd   equ     02h     ;   Entry mode display cursor move direction bit
 lcd_donMod  equ     08h     ; Display on/off control (display, cursor, blink)
 lcd_donD    equ     04h     ;   Display on/off control display bit
 lcd_donC    equ     02h     ;   Display on/off control cursor bit
@@ -34,7 +34,7 @@ lcd_setdramad equ   80h     ; Set DDRAM address (bit 0-6 contain address)
 
 lcd_2ndrow  equ     40h     ; Default address 1st char, 2nd row
 
-; read
+; status
 lcd_statM   equ     80h     ; Bit 7 contains busy flag
 lcd_addr    equ     4Fh     ; Bit 0-6 contain address counter
 
@@ -85,6 +85,7 @@ lcdSendCmd:
     push    bc                ; Preserve
     call    lcdWait
     
+    ld      c, lcdCtrl        ; Command port
     out     (c), a            ; Send command
     pop     bc                ; Restore
     ret
@@ -116,9 +117,9 @@ lcdAscC
     
     ld      a,(hl)            ; Get character
     and     a                 ; Is it zero?
-    jr      z,lcdAscD         ; If so, we're done
+    jr      z, lcdAscD         ; If so, we're done
     
-    ld      c,lcdData         ; Data port
+    ld      c, lcdData         ; Data port
     out     (c),a             ; Send data
     inc     hl                ; Next char
     jr      lcdAscC
@@ -128,6 +129,7 @@ lcdAscD:
     pop     af
     ret
 
+
 ; Wait for the busy flag (BF) to be cleared. This hangs with no display detected.
 lcdWait:                      ; Destroys bc
     ld      c, lcdCtrl        ; Command port
@@ -136,3 +138,15 @@ lcdWaitL:
     sla     b                 ; Shift busy bit (7) into carry flag
     jr      c, lcdWaitL       ; While busy
     ret
+
+; Get the address counter from the status register. Destroys A.
+lcdAddrC:
+	call    lcdWait
+	in      a, (c)            ; Read status byte
+	and     7Fh               ; mask off busy flag
+	ret
+
+regLine1:
+    defm    'AF BC DE HL IX IY IF'
+regLine3:
+    defm    'AF', 027h, 'BC', 027h, 'DE', 027h, 'HL', 027h, 'IX IY IF'
