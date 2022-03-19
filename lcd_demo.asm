@@ -285,6 +285,7 @@ gbx0:
     ret
     
 dmlp:
+    ld      ix, lcdBan
     call    SCAN1
     jr      c, dmlp
     cp      PLUSK         ; + key
@@ -325,6 +326,9 @@ hello_world:
 mpf1:
     DEFB    '   from MPF-I', 0
     
+lcdBan: ;    F     P     m     d     C     L   ; reverse banner; R-to-L
+    DEFB    00Fh, 01Fh, 02Bh, 0B3h, 08Dh, 085h
+    
 regDmp1:  ;  01234567890123456789
     DEFB    ' AF   BC   DE   HL  ', 0
       
@@ -344,6 +348,9 @@ regDmp4:  ;  01234567890123456789
 
 regDmp4p:  ;  01234567890123456789
     DEFB    'SZ.H.PNC', 027h, 0
+    
+memDmp:     ;   01234567890123456789
+            ;   xxxx xxxx xxxx xxxx
 
     include lcdlibmpf1.asm
     
