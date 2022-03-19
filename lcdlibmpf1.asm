@@ -18,7 +18,7 @@ lcdCol:     equ     01901h
 lcdMem:     equ     01902h
 
 ; configuration/commands
-lcd_cls     equ     01h        ; Clear display                                            00000001b
+lcd_cls     equ     01h     ; Clear display                                               00000001b
 lcd_home    equ     02h     ; Return home                                                 00000010b
 lcd_entMd   equ     04h     ; Entry mode set (cursor move direction and display shift)    000001xxb
 lcd_entSh   equ     01h     ;   Entry mode display shift bit
@@ -46,14 +46,17 @@ lcd_statM   equ     80h     ; Bit 7 contains busy flag
 lcd_addr    equ     7Fh     ; Bit 0-6 contain data address counter or 0-5 character graphics ac
 
 ; display specific
-lcd_lines   equ    4
-lcd_llength equ    20
+lcd_lines   equ     4
+lcd_llength equ     20
+lcd_2lineOf equ     40h
 
 ; DART debug routines
-UART_INIT:  equ     2785h
-UART_TX:    equ     27b0h
-PRINTHBYTE: equ     2f20h
-PRINT_NEW_LINE: equ 2e8dh
+;SERMON:     equ     2600h
+;UART_INIT:  equ     SERMON + 0185h
+;UART_TX:    equ     SERMON + 01b0h
+;PRINTHBYTE: equ     SERMON + 0820h
+;PRINT_NEW_LINE: equ SERMON + 078dh
+
 ;    org     2000h
     
 ;Initialisation
@@ -185,67 +188,113 @@ lcdCurs:
     inc     h
 lcNoC:
     ld      a, (hl)
+    add     a, c
     ld      (lcdMem), a
     or      lcd_setdramad
-    
-    call    PRINT_NEW_LINE
-    call    PRINTHBYTE
-    
     call    lcdSendCmd
     jr      lcDone
 
-; B: 0 - 1st line starts at 0   - add 0             ; 00h
-;    1 - 2nd line starts at 40  - add 40h           ; 28h
-;    2 - 3rd line starts at 20  - add 20            ; 14h
-;    3 - 4th line starts at 60  - add 40h + 20      ; 3Ch
-lRowOfs:
-    defb    00
-    defb    40h
-    defb    lcd_llength
-    defb    40h + lcd_llength
-
 lcrErr:
-    jr      lcDone
+;    jr      lcDone
 lccErr:
-    halt
+;    halt
 lcDone:
     ret
 
+; B: 0 - 1st line starts at 0   - add 0             ; 00h - 13h
+;    1 - 2nd line starts at 64  - add 40h           ; 40h - 53h
+;    2 - 3rd line starts at 20  - add 20            ; 14h - 27h
+;    3 - 4th line starts at 84  - add 40h + 20      ; 54h - 67h
+lRowOfs:
+    defb    00
+    defb    lcd_2lineOf
+    defb    lcd_llength
+    defb    lcd_2lineOf + lcd_llength
+
 nib2asc:
-        AND     0Fh                 ;Only low nibble in byte
-        ADD     A,'0'               ;Adjust for char offset
-        CP      '9' + 1             ;Is the hex digit > 9?
-        JR      C,n2a1              ;Yes - Jump / No - Continue
-        ADD     A,'A' - '0' - 0Ah 	;Adjust for A-F
+    AND     0Fh                 ;Only low nibble in byte
+    ADD     A,'0'               ;Adjust for char offset
+    CP      '9' + 1             ;Is the hex digit > 9?
+    JR      C,n2a1              ;Yes - Jump / No - Continue
+    ADD     A,'A' - '0' - 0Ah 	;Adjust for A-F
 n2a1:
-        RET
+    RET
 
 ; vertical scroll / carriage return
 ; read characters from line 1 and write them to line 0
-; for x=0 to 59:
-;  write (x, (read x + 20))
-; d will iterate up from 20 to 79
-; e will count down from 59 to 0
 ; b is temporary storage
 vscroll:
-    push    de
-    push    bc
-    ld      d, 20   ; first char to transfer
-    ld      e, 59   ; number of characters to transfer
-vsloop:
-    ld      a, d
+    ld      c, 0
+vslp1:
+    ld      a, c
+    add     a, lcd_2lineOf  ; 2nd line range 40h - 53h
     or      lcd_setdramad
     call    lcdSendCmd
     call    lcdGetData
     ld      b, a
-    ld      a, d
-    sub     20
+    ld      a, c            ; 1st line range 00h - 13h
     or      lcd_setdramad
+    call    lcdSendCmd
     ld      a, b
-    call    lcdSendAsc
-    dec     e
-    jr      nz, vsloop
-    pop     bc
-    pop     de
+    call    lcdSendData
+    inc     c
+    ld      a, c
+    cp      lcd_llength
+    jr      nz, vslp1
+    
+; read characters from line 2 and write them to line 1    
+    ld      c, 0
+vslp2:
+    ld      a, c
+    add     a, lcd_llength  ; 3rd line range 14h - 27h
+    or      lcd_setdramad
+    call    lcdSendCmd
+    call    lcdGetData
+    ld      b, a
+    ld      a, lcd_2lineOf  ; 2nd line range 40h - 53h
+    add     a, c
+    or      lcd_setdramad
+    call    lcdSendCmd
+    ld      a, b
+    call    lcdSendData
+    inc     c
+    ld      a, c
+    cp      lcd_llength
+    jr      nz, vslp2
+    
+; read characters from line 3 and write them to line 2
+    ld      c, 0
+vslp3:
+    ld      a, c
+    add     a, lcd_llength + lcd_2lineOf ; 4th line range 54h - 67h
+    or      lcd_setdramad
+    call    lcdGetData
+    ld      b, a
+    ld      a, lcd_llength               ; 3rd line range 14h - 27h
+    add     a, c
+    or      lcd_setdramad
+    call    lcdSendCmd
+    ld      a, b
+    call    lcdSendData
+    inc     c
+    ld      a, c
+    cp      lcd_llength
+    jr      nz, vslp3
+    
+    
+; clear 4th line
+    ld      c, 0
+vslp4:
+    ld      a, c
+    add     a, lcd_llength + lcd_2lineOf
+    or      lcd_setdramad
+    call    lcdSendCmd
+    ld      a, ' '
+    call    lcdSendData
+    inc     c
+    ld      a, c
+    cp      lcd_llength
+    jr      nz, vslp4
+    
     ret
     

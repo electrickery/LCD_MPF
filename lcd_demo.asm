@@ -4,32 +4,43 @@
 SCAN:   EQU     005FEh
 SCAN1:  EQU     00624h  ; carry =0; key detect. A is key position
 
+; keys
+PLUSK:  EQU     021h
+MINK:   EQU     01Fh
+
 ; register storage 
-USERAF: EQU     01FBCh
-USERBC: EQU     01FBEh
-USERDE: EQU     01FC0h
-USERHL: EQU     01FC2h
-UAFP:   EQU     01FC4h
-UBCP:   EQU     01FC6h
-UDEP:   EQU     01FC8h
-UHLP:   EQU     01FCAh
-USERIX: EQU     01FCCh
-USERIY: EQU     01FCEh
-USERSP: EQU     01FD0h
-USERIF: EQU     01FD2h
-FLAGH:  EQU     01FD4h
-FLAGL:  EQU     01FD6h
-FLAGHP: EQU     01FD8h
-FLAGLP: EQU     01FDAh
+USERAF: EQU     01FBCh ; AF
+USERBC: EQU     01FBEh ; BC
+USERDE: EQU     01FC0h ; DE
+USERHL: EQU     01FC2h ; HL
+UAFP:   EQU     01FC4h ; AF'
+UBCP:   EQU     01FC6h ; BC'
+UDEP:   EQU     01FC8h ; ED'
+UHLP:   EQU     01FCAh ; HL'
+USERIX: EQU     01FCCh ; IX
+USERIY: EQU     01FCEh ; IY
+USERSP: EQU     01FD0h ; SP
+USERIF: EQU     01FD2h ; I and IFF2
+FLAGH:  EQU     01FD4h ; flags (F)  high: S Z . H
+FLAGL:  EQU     01FD6h ; flags (F)  low:  . P N C 
+FLAGHP: EQU     01FD8h ; flags (F') high: S Z . H
+FLAGLP: EQU     01FDAh ; flags (F') low:  . P N C 
 USERPC: EQU     01FDCh
 
     org     2100h
     
    
-demo:
-;    ld      sp, 01900h
+start:
+    ld      sp, 01980h
     call    init
+    call    regPg1
+    call    regPg1p
+    jp      dmlp
     
+regPg1: 
+    ld      a, lcd_cls
+    call    lcdSendCmd
+   
     ld      b, 0
     ld      c, 0
     call    lcdCurs
@@ -71,7 +82,10 @@ demo:
     call    prtByte
     ld      a, l
     call    prtByte
+    
+    ret
 
+regPg1p:
     ld      b, 2
     ld      c, 0
     call    lcdCurs
@@ -113,31 +127,180 @@ demo:
     call    prtByte
     ld      a, l
     call    prtByte
+    ret
+    
+regPg2:
+    ld      a, lcd_cls
+    call    lcdSendCmd
+   
+    ld      b, 0
+    ld      c, 0
+    call    lcdCurs
+    ld      hl, regIXY
+    call    lcdSendAsc
+    
+    ld      b, 1
+    ld      c, 0
+    call    lcdCurs
+    ld      hl, (USERIX)
+    ld      a, h
+    call    prtByte ; 0-1
+    ld      a, l
+    call    prtByte ; 2-3
+      
+    ld      b, 1
+    ld      c, 5
+    call    lcdCurs
+    ld      hl, (USERIY)
+    ld      a, h
+    call    prtByte ; 5-6
+    ld      a, l
+    call    prtByte ; 7-8
+    
+    ld      b, 0
+    ld      c, 10
+    call    lcdCurs
+    ld      hl, regIFSP
+    call    lcdSendAsc
+    
+    ld      b, 1
+    ld      c, 10
+    call    lcdCurs
+    ld      hl, (USERIF)
+    ld      a, h
+    call    prtByte ; 10-11
+    ld      a, l
+    call    prtByte ; 12-13
+    
+    ld      b, 1
+    ld      c, 15
+    call    lcdCurs
+    ld      hl, (USERSP)
+    ld      a, h
+    call    prtByte ; 15-16
+    ld      a, l
+    call    prtByte ; 17-18
+    
+    ret
+
+regFl:    
+    ld      b, 2
+    ld      c, 0
+    call    lcdCurs
+    ld      hl, regDmp4
+    call    lcdSendAsc
+    
+    ld      b, 3
+    ld      c, 0
+    call    lcdCurs
+    ld      a, (FLAGH)
+    call    getBit7
+    call    lcdSendData
+    ld      a, (FLAGH)
+    call    getBit6
+    call    lcdSendData
+    ld      a, (FLAGH)
+    call    getBit5
+    call    lcdSendData
+    ld      a, (FLAGH)
+    call    getBit4
+    call    lcdSendData
+    ld      a, (FLAGL)
+    call    getBit7
+    call    lcdSendData
+    ld      a, (FLAGL)
+    call    getBit6
+    call    lcdSendData
+    ld      a, (FLAGL)
+    call    getBit5
+    call    lcdSendData
+    ld      a, (FLAGL)
+    call    getBit4
+    call    lcdSendData
+    
+    ret
+    
+regFlp:    
+    ld      b, 2
+    ld      c, 10
+    call    lcdCurs
+    ld      hl, regDmp4p
+    call    lcdSendAsc
+    
+    ld      b, 3
+    ld      c, 10
+    call    lcdCurs
+    ld      a, (FLAGHP)
+    call    getBit7
+    call    lcdSendData
+    ld      a, (FLAGHP)
+    call    getBit6
+    call    lcdSendData
+    ld      a, (FLAGHP)
+    call    getBit5
+    call    lcdSendData
+    ld      a, (FLAGHP)
+    call    getBit4
+    call    lcdSendData
+    ld      a, (FLAGLP)
+    call    getBit7
+    call    lcdSendData
+    ld      a, (FLAGLP)
+    call    getBit6
+    call    lcdSendData
+    ld      a, (FLAGLP)
+    call    getBit5
+    call    lcdSendData
+    ld      a, (FLAGLP)
+    call    getBit4
+    call    lcdSendData
+    
+    ret
+    
+getBit7:
+    bit     7, a
+    jr      z, gbx0
+    jr      gbx1
+    
+getBit6:
+    bit     6, a
+    jr      z, gbx0
+    jr      gbx1
+    
+getBit5:
+    bit     5, a
+    jr      z, gbx0
+    jr      gbx1
+    
+getBit4:
+    bit     4, a
+    jr      z, gbx0
+    jr      gbx1
+    
+gbx1:
+    ld      a, '1'
+    ret
+gbx0:
+    ld      a, '0'
+    ret
     
 dmlp:
     call    SCAN1
     jr      c, dmlp
-    cp      10h         ; + key
+    cp      PLUSK         ; + key
     jr      z, dmplus
-    cp      11h         ; - key
+    cp      MINK         ; - key
     jr      z, dmmin
     jr      dmlp
     
 dmplus:
-    ld      a, (lcdRow)
-    ld      b, a
-    ld      a, (lcdCol)
-    inc     a
-    ld      c, a
-    call    lcdCurs
+    call    regPg2
+    call    regFl
+    call    regFlp
     jr      dmlp
 dmmin:
-    ld      a, (lcdRow)
-    ld      b, a
-    ld      a, (lcdCol)
-    dec     a
-    ld      c, a
-    call    lcdCurs
+    call    regPg1
+    call    regPg1p
     jr      dmlp
     
 ; 
@@ -155,60 +318,6 @@ prtByte:
     
     ret
     
-row1:
-    ld      b, 0
-    ld      c, 0
-    call    lcdCurs
-    halt
-row2:
-    ld      b, 1
-    ld      c, 0
-    call    lcdCurs
-    halt
-row3:
-    ld      b, 2
-    ld      c, 0
-    call    lcdCurs
-    halt
-row4:
-    ld      b, 3
-    ld      c, 0
-    call    lcdCurs
-    halt
-
-plus: equ   21h
-minus:equ   1Fh
-row4m:
-    call    init
-rloop:
-    call    scan1
-    jr      c, rloop
-    cp      21h ; + key
-    jr      z, rplus
-    cp      1Fh ; - key
-    jr      z, rminus
-    
-    jr      rloop
-    
-rplus:
-    ld      a, (lcdRow)
-    inc     a
-    ld      (lcdRow), a
-    ld      b, a
-    ld      a, (lcdCol)
-    ld      c, a
-    call    lcdCurs
-    jr      rloop
-    
-rminus:
-    ld      a, (lcdRow)
-    dec     a
-    ld      (lcdRow), a
-    ld      b, a
-    ld      a, (lcdCol)
-    ld      c, a
-    call    lcdCurs
-    jr      rloop
 
 hello_world:
     DEFB    ' Hello, world!', 0
@@ -224,11 +333,17 @@ regDmp2:  ;  01234567890123456789
 ;           "A'F' B'C' D'E' H'L' "
     DEFB    ' AF', 027h, '  BC', 027h, '  DE', 027h, '  HL', 027h, 0
     
-regdmp3:  ;  01234567890123456789
-    DEFB    'I X  I Y  I F  S P  ', 0    
+regIXY:  ;  01234567890123456789
+    DEFB    'IX   IY', 0  
+      
+regIFSP:  ;  01234567890123456789
+    DEFB    'IF   SP  ', 0    
     
-regdmp4:  ;  01234567890123456789
-    DEFB    'PC   ', 0
+regDmp4:  ;  01234567890123456789
+    DEFB    'SZ.H.PNC', 0
+
+regDmp4p:  ;  01234567890123456789
+    DEFB    'SZ.H.PNC', 027h, 0
 
     include lcdlibmpf1.asm
     
