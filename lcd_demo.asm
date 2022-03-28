@@ -28,7 +28,6 @@ FLAGLP: EQU     01FDAh ; flags (F') low:  . P N C
 USERPC: EQU     01FDCh
 
     org     2100h
-    
    
 start:
     ld      sp, 01980h
@@ -193,30 +192,8 @@ regFl:
     ld      b, 3
     ld      c, 0
     call    lcdCurs
-    ld      a, (FLAGH)
-    call    getBit7
-    call    lcdSendData
-    ld      a, (FLAGH)
-    call    getBit6
-    call    lcdSendData
-    ld      a, (FLAGH)
-    call    getBit5
-    call    lcdSendData
-    ld      a, (FLAGH)
-    call    getBit4
-    call    lcdSendData
-    ld      a, (FLAGL)
-    call    getBit7
-    call    lcdSendData
-    ld      a, (FLAGL)
-    call    getBit6
-    call    lcdSendData
-    ld      a, (FLAGL)
-    call    getBit5
-    call    lcdSendData
-    ld      a, (FLAGL)
-    call    getBit4
-    call    lcdSendData
+    ld      a, (USERAF)
+    call    bits2lcd
     
     ret
     
@@ -230,31 +207,9 @@ regFlp:
     ld      b, 3
     ld      c, 10
     call    lcdCurs
-    ld      a, (FLAGHP)
-    call    getBit7
-    call    lcdSendData
-    ld      a, (FLAGHP)
-    call    getBit6
-    call    lcdSendData
-    ld      a, (FLAGHP)
-    call    getBit5
-    call    lcdSendData
-    ld      a, (FLAGHP)
-    call    getBit4
-    call    lcdSendData
-    ld      a, (FLAGLP)
-    call    getBit7
-    call    lcdSendData
-    ld      a, (FLAGLP)
-    call    getBit6
-    call    lcdSendData
-    ld      a, (FLAGLP)
-    call    getBit5
-    call    lcdSendData
-    ld      a, (FLAGLP)
-    call    getBit4
-    call    lcdSendData
-    
+    ld      a, (UAFP)
+    call    bits2lcd
+   
     ret
     
 getBit7:
@@ -285,7 +240,7 @@ gbx0:
     ret
     
 dmlp:
-    ld      ix, lcdBan
+    ld      ix, lcdBan3
     call    SCAN1
     jr      c, dmlp
     cp      PLUSK         ; + key
@@ -319,6 +274,34 @@ prtByte:
     
     ret
     
+bits2lcd:
+    push    bc
+    push    de
+    ld      e, 8
+    ld      c, a
+nextbit:
+    rlc     c
+    jr      c, one
+    call    send0
+    jr      tonext
+one:
+    call    send1
+tonext:
+    dec     e
+    jr      nz, nextbit
+    pop     de
+    pop     bc
+    ret
+    
+send1:
+    ld      a, '1'
+    call    lcdSendData
+    ret
+    
+send0:
+    ld      a, '0'
+    call    lcdSendData
+    ret
 
 hello_world:
     DEFB    ' Hello, world!', 0
@@ -328,6 +311,12 @@ mpf1:
     
 lcdBan: ;    F     P     m     d     C     L   ; reverse banner; R-to-L
     DEFB    00Fh, 01Fh, 02Bh, 0B3h, 08Dh, 085h
+
+lcdBan2: ;    F     P     u     d     C     L   ; reverse banner; R-to-L
+    DEFB    00Fh, 01Fh, 036h, 0B3h, 08Dh, 085h
+    
+lcdBan3: ;    F     P     u     d     C     L   ; reverse banner; R-to-L
+    DEFB    00Fh, 01Fh, 0A1h, 0B3h, 08Dh, 085h
     
 regDmp1:  ;  01234567890123456789
     DEFB    ' AF   BC   DE   HL  ', 0
@@ -349,9 +338,11 @@ regDmp4:  ;  01234567890123456789
 regDmp4p:  ;  01234567890123456789
     DEFB    'SZ.H.PNC', 027h, 0
     
-memDmp:     ;   01234567890123456789
-            ;   xxxx xxxx xxxx xxxx
+memDmp1:    ;   01234567890123456789
+            ;   xxxx xxxx xxxx xxxx   (start address in 7-seg display)
 
+memDmp2:    ;   01234567890123456789
+            ;    aa  aa  aa  aa       (start address in 7-seg display)
     include lcdlibmpf1.asm
     
     
