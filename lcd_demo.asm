@@ -5,8 +5,39 @@ SCAN:   EQU     005FEh
 SCAN1:  EQU     00624h  ; carry =0; key detect. A is key position
 
 ; keys
-PLUSK:  EQU     021h
-MINK:   EQU     01Fh
+K_MOVE:	EQU     023h
+K_RELA:	EQU     01Dh
+K_TAPEWR:EQU     017h
+K_TAPERD:EQU     011h
+K_INS:	EQU     022h
+K_DEL:	EQU     01Ch
+K_STEP:	EQU     010h
+K_GO:	EQU     016h
+K_SBR:	EQU     01Eh
+K_CBR:	EQU     018h
+K_PLUS: EQU     021h
+K_MIN:  EQU     01Fh
+K_PC:	EQU     019h
+K_REG:	EQU     01Ah
+K_DATA:	EQU     020h
+K_ADDR:	EQU     01Bh
+KEY_C:	EQU     015h	
+KEY_8:	EQU     014h
+KEY_4:	EQU     013h
+KEY_0:	EQU     012h
+KEY_D:	EQU     00Fh
+KEY_9:	EQU     00Eh
+KEY_5:	EQU     00Dh
+KEY_1:	EQU     00Ch
+KEY_E:	EQU     009h
+KEY_A:	EQU     008h
+KEY_6:	EQU     007h
+KEY_2:	EQU     006h
+KEY_F:	EQU     003h
+KEY_B:	EQU     002h
+KEY_7:	EQU     001h
+KEY_3:	EQU     000h
+
 
 ; register storage 
 USERAF: EQU     01FBCh ; AF
@@ -243,10 +274,13 @@ dmlp:
     ld      ix, lcdBan3
     call    SCAN1
     jr      c, dmlp
-    cp      PLUSK         ; + key
+    cp      K_PLUS      ; + key
     jr      z, dmplus
-    cp      MINK         ; - key
+    cp      K_MIN       ; - key
     jr      z, dmmin
+    cp		K_INS		; INS key
+    jr		z, scroll
+	jr		anyKey
     jr      dmlp
     
 dmplus:
@@ -258,7 +292,29 @@ dmmin:
     call    regPg1
     call    regPg1p
     jr      dmlp
+
+anyKey:
+	cp		016h ; keys0&1 tables
+	jr		c, key0
+
+    jr      dmlp
     
+key0:
+	ld		hl, keys0
+	call	key2lcd
+    jp      dmlp
+
+key2lcd:    
+	ld		d, 0
+	ld		e, a
+	add		hl, de
+	ld		a, (hl)
+	call	nib2asc
+	call    lcdSendData
+	ld		b, 0FFh
+	djnz	$
+    jp      dmlp 
+
 ; 
 prtByte:    
     push    af
@@ -302,6 +358,12 @@ send0:
     ld      a, '0'
     call    lcdSendData
     ret
+    
+scroll:
+	call	vscroll
+	jp      dmlp
+	
+
 
 hello_world:
     DEFB    ' Hello, world!', 0
@@ -344,5 +406,32 @@ memDmp1:    ;   01234567890123456789
 memDmp2:    ;   01234567890123456789
             ;    aa  aa  aa  aa       (start address in 7-seg display)
     include lcdlibmpf1.asm
-    
-    
+
+; key scan code to nibble
+KEYS0:	
+	DEFB	03h		;   000h    
+	DEFB	07h		;	001h
+	DEFB	0Bh		;   002h
+	DEFB	0Fh		;	003h
+	DEFB	0FFh	;	004h
+	DEFB	0FFh	;   005h
+	DEFB	02h		;	006h
+	DEFB	06h		;	007h
+	DEFB	0Ah		;	008h
+	DEFB	0Eh		;	009h
+	DEFB	0FFh	;	00Ah
+	DEFB	0FFh	;	00Bh
+	DEFB	01h		;	00Ch
+	DEFB	05h		;	00Dh
+	DEFB	09h		;   00Eh
+	DEFB	0Dh		;	00Fh
+KEYS1:
+	DEFB	0FFh	;	010h
+	DEFB	0FFh	;	011h
+	DEFB	00h		;	012h
+	DEFB	04h		;	013h
+	DEFB	08h		;	014h
+	DEFB	0Ch		;	015h
+
+
+  

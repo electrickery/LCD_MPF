@@ -295,6 +295,9 @@ vslp4:
     ld      a, c
     cp      lcd_llength
     jr      nz, vslp4
+    ld		b, 3
+    ld		c, 0
+    call	lcdCurs
     
     ret
     
