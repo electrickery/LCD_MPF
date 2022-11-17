@@ -11,3 +11,5 @@ Currently the repository exists of an library file and a demo, used to test the 
 The current use-case is an assistant for the single-step function in the monitor ROM. The 
 keyboard allows for register inspection, but just one at a time. A jump to the demo shows 
 almost all stored register values in two pages.
+
+More info at: https://electrickery.nl/comp/mpf1/lcd_mpf/
